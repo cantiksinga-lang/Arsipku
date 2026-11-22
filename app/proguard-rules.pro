@@ -1,4 +1,0 @@
--dontwarn **
--repackageclasses ''
--allowaccessmodification
--optimizationpasses 5
