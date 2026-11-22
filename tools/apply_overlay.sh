@@ -1,7 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-GRADLE=$(ls android/app/build.gradle.kts android/app/build.gradle 2>/dev/null | head -n1)
+if [ -f android/app/build.gradle.kts ]; then
+  GRADLE=android/app/build.gradle.kts
+elif [ -f android/app/build.gradle ]; then
+  GRADLE=android/app/build.gradle
+else
+  echo "File gradle tidak ditemukan"; ls -R android/app | head -50; exit 1
+fi
 echo "Gradle file: $GRADLE"
 
 # Paksa package = com.alhafidz.app dan minSdk 23 (ML Kit + widget)
