@@ -25,20 +25,21 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      # Cukup setup Android SDK, TANPA packages & TANPA cmdline-tools-version
-      # agar tidak memicu download ulang / konflik versi.
+      # PENTING: override packages untuk menghindari paket 'tools'
+      # yang sudah dihapus dari repo SDK.
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
+        with:
+          packages: 'platform-tools'
 
-      # Terima semua lisensi secara non-interaktif (ini yang sebelumnya bikin stuck di "Accept? (y/N)")
+      # Pastikan semua lisensi diterima (non-interaktif)
       - name: Accept Android SDK licenses
         run: yes | sdkmanager --licenses || true
 
-      # Install paket SDK yang dibutuhkan secara eksplisit
+      # Instal paket SDK yang benar-benar dibutuhkan
       - name: Install SDK packages
         run: |
           sdkmanager --install \
-            "platform-tools" \
             "platforms;android-35" \
             "build-tools;35.0.0"
 
