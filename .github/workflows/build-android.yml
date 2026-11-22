@@ -50,7 +50,7 @@ jobs:
       - run: flutter pub get
 
       - name: Build APK release
-        run: flutter build apk --release --no-shrink
+        run: flutter build apk --release
 
       - name: Rename APK
         run: cp build/app/outputs/flutter-apk/app-release.apk GarasiKu.apk
