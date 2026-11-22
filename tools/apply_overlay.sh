@@ -17,6 +17,12 @@ sed -i -E 's/minSdk[[:space:]]*=[[:space:]]*flutter\.minSdkVersion/minSdk = 23/'
 sed -i -E 's/minSdkVersion[[:space:]]+flutter\.minSdkVersion/minSdkVersion 23/' "$GRADLE"
 grep -nE 'namespace|applicationId|minSdk' "$GRADLE" || true
 
+# Hapus MainActivity & icon bawaan, ganti dengan overlay
+find android/app/src/main -name 'MainActivity.*' -delete
+find android/app/src/main/res -name 'ic_launcher*' -delete
+mkdir -p android/app/src/main/kotlin/com/alhafidz/app
+cp -r android_overlay/. android/app/src/main/
+
 # Matikan R8/minify (ML Kit gagal di R8 karena class CJK tidak ada)
 if [[ "$GRADLE" == *.kts ]]; then
   sed -i -E '/signingConfig[[:space:]]*=[[:space:]]*signingConfigs/a\            isMinifyEnabled = false\n            isShrinkResources = false' "$GRADLE"
@@ -25,10 +31,4 @@ else
 fi
 echo "---- bagian buildTypes ----"
 grep -n -B3 -A6 'buildTypes' "$GRADLE" || true
-
-# Hapus MainActivity & icon bawaan, ganti dengan overlay
-find android/app/src/main -name 'MainActivity.*' -delete
-find android/app/src/main/res -name 'ic_launcher*' -delete
-mkdir -p android/app/src/main/kotlin/com/alhafidz/app
-cp -r android_overlay/. android/app/src/main/
 echo "Overlay diterapkan"

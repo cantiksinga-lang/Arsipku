@@ -1,6 +1,8 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'models.dart';
 
@@ -25,6 +27,22 @@ class Native {
       return (await _ch.invokeMethod<bool>('pinWidget')) ?? false;
     } catch (_) {
       return false;
+    }
+  }
+
+  static Future<bool> saveBackup(String name, String content) async {
+    try {
+      return (await _ch.invokeMethod<bool>('backupFile', {'name': name, 'content': content})) ?? false;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  static Future<String?> pickBackup() async {
+    try {
+      return await _ch.invokeMethod<String>('restoreFile');
+    } catch (_) {
+      return null;
     }
   }
 
@@ -89,13 +107,39 @@ class Store extends ChangeNotifier {
     sims = ((j['sims'] ?? []) as List).map((e) => SimItem.fromJson(Map<String, dynamic>.from(e as Map))).toList();
   }
 
-  String exportJson() => jsonEncode(toMap());
+  /// Isi file backup: semua data + foto kendaraan (base64).
+  Future<String> backupString() async {
+    final m = toMap();
+    final photos = <String, String>{};
+    for (final v in vehicles) {
+      final p = v.photo;
+      if (p != null && File(p).existsSync()) photos[v.id] = base64Encode(await File(p).readAsBytes());
+    }
+    m['app'] = 'GarasiKu';
+    m['version'] = 1;
+    m['backupAt'] = DateTime.now().toIso8601String();
+    m['photos'] = photos;
+    return jsonEncode(m);
+  }
 
-  Future<bool> importJson(String s) async {
+  Future<bool> restoreFromString(String s) async {
     try {
       final m = jsonDecode(s);
-      if (m is! Map) return false;
-      _apply(Map<String, dynamic>.from(m));
+      if (m is! Map || m['vehicles'] is! List || m['txs'] is! List) return false;
+      final map = Map<String, dynamic>.from(m);
+      _apply(map);
+      final photos = Map<String, dynamic>.from((map['photos'] ?? {}) as Map);
+      final dir = await getApplicationDocumentsDirectory();
+      for (final v in vehicles) {
+        final b = photos[v.id];
+        if (b is String) {
+          final f = File('${dir.path}/veh_restore_${v.id}.jpg');
+          await f.writeAsBytes(base64Decode(b));
+          v.photo = f.path;
+        } else if (v.photo != null && !File(v.photo!).existsSync()) {
+          v.photo = null;
+        }
+      }
       await commit();
       return true;
     } catch (_) {

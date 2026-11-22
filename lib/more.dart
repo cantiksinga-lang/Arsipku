@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:intl/intl.dart';
 import 'models.dart';
 import 'store.dart';
 import 'ui.dart';
@@ -288,36 +288,39 @@ class SettingsScreen extends StatelessWidget {
                 }
               },
             ),
-            _head(context, 'Data'),
+            _head(context, 'Backup & Restore'),
             ListTile(
-              leading: const Icon(Icons.copy_rounded),
-              title: const Text('Salin data (cadangan)'),
-              subtitle: const Text('Salin semua data ke clipboard; simpan di catatan/chat Anda.'),
+              leading: const Icon(Icons.backup_rounded),
+              title: const Text('Backup data'),
+              subtitle: const Text('Simpan semua data & foto kendaraan ke file (GarasiKu-tanggal).'),
               onTap: () async {
-                await Clipboard.setData(ClipboardData(text: store.exportJson()));
-                if (context.mounted) snack(context, 'Data disalin ke clipboard');
+                final name = 'GarasiKu-${DateFormat('dd-MM-yyyy').format(DateTime.now())}.json';
+                final content = await store.backupString();
+                final ok = await Native.saveBackup(name, content);
+                if (context.mounted) snack(context, ok ? 'Backup tersimpan: $name' : 'Backup dibatalkan');
               },
             ),
             ListTile(
-              leading: const Icon(Icons.paste_rounded),
-              title: const Text('Pulihkan dari clipboard'),
-              subtitle: const Text('Menimpa data saat ini.'),
+              leading: const Icon(Icons.settings_backup_restore_rounded),
+              title: const Text('Restore data'),
+              subtitle: const Text('Pilih file backup GarasiKu. Data saat ini akan diganti.'),
               onTap: () async {
                 final ok = await showDialog<bool>(
                   context: context,
                   builder: (ctx) => AlertDialog(
-                    title: const Text('Pulihkan data?'),
-                    content: const Text('Data saat ini akan diganti dengan data dari clipboard.'),
+                    title: const Text('Restore data?'),
+                    content: const Text('Data saat ini akan diganti dengan isi file backup.'),
                     actions: [
                       TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Batal')),
-                      FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Pulihkan')),
+                      FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Pilih file')),
                     ],
                   ),
                 );
                 if (ok != true) return;
-                final d = await Clipboard.getData('text/plain');
-                final done = await store.importJson(d?.text ?? '');
-                if (context.mounted) snack(context, done ? 'Data dipulihkan' : 'Isi clipboard bukan data GarasiKu');
+                final text = await Native.pickBackup();
+                if (text == null) return;
+                final done = await store.restoreFromString(text);
+                if (context.mounted) snack(context, done ? 'Data berhasil di-restore' : 'File bukan backup GarasiKu yang valid');
               },
             ),
             const SizedBox(height: 32),
